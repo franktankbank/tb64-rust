@@ -24,8 +24,6 @@ placeholder
 
 👤 **Frank Froggins**
 
-* Github: [@franktankbank](https://github.com/franktankbank)
-
 ## Show your support
 
 Give a ⭐️ if this project helped you!
@@ -34,6 +32,3 @@ Give a ⭐️ if this project helped you!
 
 Copyright © 2025 [Frank Froggins](https://github.com/franktankbank).<br />
 This project is [MIT](https://github.com/franktankbank/tb64/blob/main/LICENSE) licensed.
-
-***
-_This README was generated with ❤️ by [readme-md-generator](https://github.com/kefranabg/readme-md-generator)_
