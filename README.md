@@ -16,8 +16,9 @@ placeholder
 
 ## Usage
 
+Encode a string
 ```sh
-placeholder
+tb64 abcd
 ```
 
 ## Author
