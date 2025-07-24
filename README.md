@@ -32,4 +32,4 @@ Give a ⭐️ if this project helped you!
 ## 📝 License
 
 Copyright © 2025 [Frank Froggins](https://github.com/franktankbank).<br />
-This project is [MIT](https://github.com/franktankbank/tb64/blob/main/LICENSE) licensed.
+This project is [MIT](https://github.com/franktankbank/tb64-rust/blob/main/LICENSE) licensed.
