@@ -1,21 +1,27 @@
 mod core;
 mod error;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use clap::Parser;
-use core::{RawBox, print_box};
+use clap::{Parser, builder::styling};
+use terminal_size::{terminal_size, Width, Height};
+use core::{RawBox, print_box, RGB};
+
+const STYLES_RGB: styling::Styles = styling::Styles::styled()
+    .header(styling::RgbColor(166, 227, 161).on_default().bold())
+    .usage(styling::RgbColor(166, 227, 161).on_default().bold())
+    .literal(styling::RgbColor(137, 180, 250).on_default().bold())
+    .placeholder(styling::RgbColor(137, 220, 235).on_default())
+    .error(styling::RgbColor(243, 139, 168).on_default().bold())
+    .invalid(styling::RgbColor(249, 226, 175).on_default().bold())
+    .valid(styling::RgbColor(166, 227, 161).on_default().bold());
+
 #[cfg(target_family = "windows")]
 use windows_sys::Win32::System::Console::SetConsoleOutputCP;
-cfg_if::cfg_if! {
-    if #[cfg(target_family = "unix")] {
-        use nix::libc::{ioctl, TIOCGWINSZ, winsize};
-        use std::os::unix::io::AsRawFd;
-        use std::io::stdout;
-    }
-}
-use error::{Errors, TB64Error};
+
+use error::TB64Error;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
+#[command(styles = STYLES_RGB)]
 struct Cli {
     /// Optional name to operate on
     input: Option<String>,
@@ -30,85 +36,48 @@ fn triple_encode(input: String) -> String {
 }
 
 fn main() {
+    let cli: Cli = Cli::parse();
+
+    match core(cli) {
+        Ok(_) => (),
+        Err(e) => eprint!("{e}")
+    }
+}
+
+fn core(cli: Cli) -> Result<(), TB64Error> {
     #[cfg(target_family = "windows")]
     {
         unsafe {
             SetConsoleOutputCP(65001);
         }
     }
-    let cli: Cli = Cli::parse();
     let raw_b: RawBox;
 
     if let Some(input) = cli.input.as_deref() {
         let enc: String = triple_encode(String::from(input));
 
-        #[cfg(target_family = "unix")]
-        {
-            match main_unix(enc.clone()) {
-                Err(e) => {
-                    eprint!("{e}");
-                    return;
-                }
-                _ => (),
-            }
-        }
-        #[cfg(target_family = "windows")]
-        {
-            if let Err(e) = main_win32(enc.clone()) {
-                eprint!("{e}");
-                return;
-            }
+        let term_cols: u16 = terminal_size().unwrap_or((Width(64), Height(30))).0.0;
+
+        let length: usize = enc.len() + 7 + 5;
+        let width: usize = term_cols as usize - 4;
+
+        if length > width {
+            return Err(TB64Error::Size)
         }
 
         raw_b = RawBox {
             text1: String::from("Encoded"),
-            text_color_hex1: String::from("#00CED1"),
+            text_color_rgb1: RGB {r: 0, g: 206, b: 209},
             text2: enc.clone(),
-            text_color_hex2: String::from("#FFEA00"),
-            sep_color_hex: String::from("#FF69B4"),
-            box_color_hex: String::from("#7CFC00"),
+            text_color_rgb2: RGB { r: 255, g: 234, b: 0 },
+            sep_color_rgb: RGB { r: 255, g: 105, b: 180 },
+            box_color_rgb: RGB { r: 124, g: 252, b: 0 },
         };
         print_box(raw_b);
         cli_clipboard::set_contents(enc.to_owned()).unwrap();
-    } else if let Err(e) = invalid_arg() { eprint!("{e}") }
-}
-
-fn invalid_arg() -> Result<(), TB64Error> {
-    Err(TB64Error { code: Errors::Arg })
-}
-
-#[cfg(target_family = "unix")]
-fn main_unix(enc: String) -> Result<(), TB64Error> {
-    let mut w: winsize = winsize {
-        ws_row: 0,
-        ws_col: 0,
-        ws_xpixel: 0,
-        ws_ypixel: 0,
-    };
-
-    let fd: i32 = stdout().as_raw_fd();
-
-    // Use unsafe block because ioctl involves raw file descriptors
-    unsafe {
-        // Call ioctl to get terminal size
-        // Retrieve terminal size via `ioctl` (TIOCGWINSZ)
-        ioctl(fd, TIOCGWINSZ, &mut w);
-    }
-
-    // Calculate the width by subtracting 4 from the number of columns
-    let width: usize = w.ws_col as usize - 4;
-    let length: usize = enc.len() + 7 + 5;
-    if length > width {
-        Err(TB64Error { code: Errors::Size })
     } else {
-        Ok(())
+        return Err(TB64Error::Arg);
     }
-}
-#[cfg(target_family = "windows")]
-fn main_win32(enc: String) -> Result<(), TB64Error> {
-    if enc.len() > 64 {
-        Err(TB64Error { code: Errors::Size })
-    } else {
-        Ok(())
-    }
+
+    Ok(())
 }
